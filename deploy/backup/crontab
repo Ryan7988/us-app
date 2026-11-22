@@ -1,7 +1,7 @@
-# 時區由 TZ 環境變數決定（Asia/Taipei）
+# 時區由 TZ 環境變數決定（Asia/Taipei）；cron 不會繼承容器環境變數，所以先載入 /etc/backup.env
 # 每天 03:30 增量備份
-30 3 * * * /usr/local/bin/backup.sh
+30 3 * * * . /etc/backup.env && /usr/local/bin/backup.sh >> /proc/1/fd/1 2>&1
 # 每週日 05:00 檢查備份完整性
-0 5 * * 0 /usr/local/bin/verify.sh check
+0 5 * * 0 . /etc/backup.env && /usr/local/bin/verify.sh check >> /proc/1/fd/1 2>&1
 # 每月 1 號 05:30 實際還原到暫存目錄並比對
-30 5 1 * * /usr/local/bin/verify.sh restore-test
+30 5 1 * * . /etc/backup.env && /usr/local/bin/verify.sh restore-test >> /proc/1/fd/1 2>&1

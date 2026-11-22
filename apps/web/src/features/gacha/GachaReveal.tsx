@@ -32,7 +32,7 @@ export function GachaReveal({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-stone-950/90 p-6"
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

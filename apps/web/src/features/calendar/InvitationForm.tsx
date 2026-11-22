@@ -17,7 +17,7 @@ export function SlotsEditor({
         <div key={i} className="flex items-center gap-2">
           <input
             type="datetime-local"
-            className="input flex-1"
+            className="input min-w-0 flex-1"
             required
             value={s.start}
             aria-label={`候選時間 ${i + 1}`}
@@ -26,7 +26,7 @@ export function SlotsEditor({
             }
           />
           <select
-            className="input w-24"
+            className="input w-24 shrink-0"
             value={s.hours}
             aria-label="長度"
             onChange={(e) =>

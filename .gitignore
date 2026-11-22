@@ -22,3 +22,4 @@ dev-dist/
 *.tsbuildinfo
 
 .DS_Store
+e2e/screenshots/

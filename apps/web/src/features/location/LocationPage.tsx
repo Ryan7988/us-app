@@ -42,6 +42,11 @@ export function LocationPage() {
   const [msg, setMsg] = useState("");
   const [sent, setSent] = useState(false);
   const mine = data.find((x) => x.user_id === me?.id);
+  // 開關立刻反應；伺服器回來的值一致後就交回給伺服器資料
+  const [sharingLocal, setSharingLocal] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (sharingLocal !== null && mine?.sharing === sharingLocal) setSharingLocal(null);
+  }, [mine?.sharing, sharingLocal]);
   const points = useMemo(
     () =>
       data.flatMap((x) =>
@@ -163,9 +168,12 @@ export function LocationPage() {
           <input
             type="checkbox"
             className="size-5 accent-brand-500"
-            checked={mine?.sharing ?? false}
+            checked={sharingLocal ?? mine?.sharing ?? false}
             disabled={!online}
-            onChange={(e) => setSharing.mutate(e.target.checked)}
+            onChange={(e) => {
+              setSharingLocal(e.target.checked);
+              setSharing.mutate(e.target.checked, { onError: () => setSharingLocal(null) });
+            }}
             aria-label="分享我的位置"
           />
         </label>

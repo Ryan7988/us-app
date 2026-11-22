@@ -140,7 +140,8 @@ def current(_: CurrentUser, session: SessionDep) -> CurrentOut:
     return CurrentOut(
         draw=_draw_out(session, d),
         streak=streak(session),
-        misses_since_ssr=misses_since_last_ssr(history_rarities(session, exclude_period=d.period)),
+        # 已開獎的本月也算進去（顯示「再幾次必中」要包含這次）
+        misses_since_ssr=misses_since_last_ssr(history_rarities(session)),
         pity_threshold=settings.pity_threshold,
         pool_counts=dict(Counter(c.rarity for c in pool)),
         pending_review=len(pending),

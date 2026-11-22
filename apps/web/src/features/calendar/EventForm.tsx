@@ -150,7 +150,7 @@ export function EventForm({
           </label>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid min-w-0 grid-cols-1 gap-2">
           <label>
             <span className="label">開始</span>
             <input
