@@ -1,8 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { logout } from "@/lib/auth";
 import { isStandalone } from "@/lib/platform";
 import { useUsers } from "@/lib/users";
+
+const LINKS = [
+  { to: "/more/album", icon: "📷", label: "相簿" },
+  { to: "/more/location", icon: "📍", label: "位置與報平安" },
+  { to: "/more/settings", icon: "⚙️", label: "設定（通知、紀念日、行事曆訂閱）" },
+  { to: "/more/admin", icon: "🛠️", label: "後台" },
+];
 
 export function MorePage() {
   const { me } = useUsers();
@@ -30,17 +38,12 @@ export function MorePage() {
       </section>
 
       <section className="card mb-4 divide-y divide-black/5 p-0 dark:divide-white/10">
-        {[
-          ["📷", "相簿"],
-          ["📍", "位置與報平安"],
-          ["🔔", "通知設定"],
-          ["🛠️", "後台"],
-        ].map(([icon, label]) => (
-          <div key={label} className="flex items-center gap-3 px-4 py-3.5 text-stone-400">
-            <span>{icon}</span>
-            <span className="flex-1">{label}</span>
-            <span className="text-xs">即將推出</span>
-          </div>
+        {LINKS.map((l) => (
+          <Link key={l.to} to={l.to} className="flex items-center gap-3 px-4 py-3.5">
+            <span>{l.icon}</span>
+            <span className="flex-1">{l.label}</span>
+            <span className="text-stone-300">›</span>
+          </Link>
         ))}
       </section>
 

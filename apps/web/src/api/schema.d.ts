@@ -1610,6 +1610,11 @@ export interface components {
             avatar_path: string | null;
             /** Is Admin */
             is_admin: boolean;
+            /**
+             * Location Sharing
+             * @default false
+             */
+            location_sharing: boolean;
         };
         /** ValidationError */
         ValidationError: {

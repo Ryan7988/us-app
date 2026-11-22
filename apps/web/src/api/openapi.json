@@ -4962,6 +4962,11 @@
           "is_admin": {
             "type": "boolean",
             "title": "Is Admin"
+          },
+          "location_sharing": {
+            "type": "boolean",
+            "title": "Location Sharing",
+            "default": false
           }
         },
         "type": "object",

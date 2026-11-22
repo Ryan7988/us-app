@@ -10,8 +10,21 @@ export const useWsStatus = create<{ status: WsStatus }>(() => ({ status: "closed
 const INVALIDATE: Record<string, string[][]> = {
   "wish.changed": [["wishes"]],
   "event.changed": [["events"]],
-  "photo.added": [["photos"]],
+  "invitation.received": [["invitations"]],
+  "invitation.responded": [["invitations"], ["events"]],
+  "gacha.ready": [["gacha"]],
+  "gacha.drawn": [["gacha"]],
+  "photo.added": [["photos"], ["albums"]],
+  "location.updated": [["locations"]],
 };
+
+/** 讓頁面可以監聽特定事件（例如扭蛋開獎動畫要兩支手機同時播放） */
+type Listener = (type: string, data: Record<string, unknown>) => void;
+const listeners = new Set<Listener>();
+export function onRealtime(fn: Listener): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
 
 /** App 開著時保持 WebSocket；iOS 進背景會斷線，回前景自動重連並重抓資料。 */
 export function useRealtime(): void {
@@ -41,8 +54,12 @@ export function useRealtime(): void {
       };
       ws.onmessage = (e) => {
         try {
-          const msg = JSON.parse(e.data as string) as { type: string };
+          const msg = JSON.parse(e.data as string) as {
+            type: string;
+            data: Record<string, unknown>;
+          };
           for (const key of INVALIDATE[msg.type] ?? []) qc.invalidateQueries({ queryKey: key });
+          for (const fn of listeners) fn(msg.type, msg.data ?? {});
         } catch {
           /* ignore */
         }

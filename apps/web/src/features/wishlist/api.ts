@@ -48,11 +48,19 @@ export function useDeleteWish() {
 export function useCompleteWish() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, done }: { id: string; done: boolean }) =>
+    mutationFn: ({
+      id,
+      done,
+      photo_ids = [],
+    }: {
+      id: string;
+      done: boolean;
+      photo_ids?: string[];
+    }) =>
       unwrap(
         api.POST("/api/v1/wishes/{wish_id}/complete", {
           params: { path: { wish_id: id } },
-          body: { done },
+          body: { done, photo_ids },
         }),
       ),
     // 樂觀更新：勾選立刻有反應

@@ -8,6 +8,7 @@ class UserPublic(BaseModel):
     color: str
     avatar_path: str | None
     is_admin: bool
+    location_sharing: bool = False
 
 
 class LoginRequest(BaseModel):

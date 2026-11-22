@@ -1,7 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import type { Wish } from "@/api/types";
 import { useOnline } from "@/lib/online";
-import { SUGGESTED_CATEGORIES, useCreateWish, useDeleteWish, useUpdateWish } from "./api";
+import { useUpload } from "@/lib/upload";
+import {
+  SUGGESTED_CATEGORIES,
+  useCompleteWish,
+  useCreateWish,
+  useDeleteWish,
+  useUpdateWish,
+} from "./api";
 
 export function WishForm({
   wish,
@@ -20,6 +27,10 @@ export function WishForm({
   const update = useUpdateWish();
   const del = useDeleteWish();
   const online = useOnline();
+  const complete = useCompleteWish();
+  const upload = useUpload();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [photoMsg, setPhotoMsg] = useState<string | null>(null);
   const busy = create.isPending || update.isPending || del.isPending;
   const error = create.error ?? update.error ?? del.error;
 
@@ -36,6 +47,19 @@ export function WishForm({
     if (wish) await update.mutateAsync({ id: wish.id, body });
     else await create.mutateAsync(body);
     onDone();
+  };
+
+  /** 完成並附照片：照片自動進相簿，並關聯到這個願望 */
+  const onPhotos = async (files: FileList | null) => {
+    if (!wish || !files?.length) return;
+    setPhotoMsg("上傳中…");
+    try {
+      const r = await upload.mutateAsync({ files: Array.from(files) });
+      await complete.mutateAsync({ id: wish.id, done: true, photo_ids: r.photos.map((p) => p.id) });
+      setPhotoMsg(`✓ 已附上 ${r.photos.length} 張照片，也放進相簿了`);
+    } catch (e) {
+      setPhotoMsg((e as Error).message);
+    }
   };
 
   const remove = async () => {
@@ -106,6 +130,27 @@ export function WishForm({
           onChange={(e) => setUrl(e.target.value)}
         />
       </div>
+      {wish && (
+        <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-900/20">
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*,.heic,.heif"
+            className="hidden"
+            onChange={(e) => onPhotos(e.target.files)}
+          />
+          <button
+            type="button"
+            className="w-full text-sm font-medium text-emerald-700 dark:text-emerald-300"
+            disabled={!online || upload.isPending}
+            onClick={() => fileRef.current?.click()}
+          >
+            {wish.done_at ? "📷 再加幾張回憶照片" : "🎉 完成了！附上照片"}
+          </button>
+          {photoMsg && <p className="mt-1 text-center text-xs text-stone-500">{photoMsg}</p>}
+        </div>
+      )}
       {error && <p className="text-sm text-red-500">{error.message}</p>}
       <div className="flex gap-2">
         {wish && (

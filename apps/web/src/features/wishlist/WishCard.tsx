@@ -108,6 +108,13 @@ export function WishCard({
             )}
           </div>
         </div>
+        {wish.cover_thumb_url && (
+          <img
+            src={wish.cover_thumb_url}
+            alt=""
+            className="size-14 shrink-0 rounded-xl object-cover"
+          />
+        )}
       </div>
     </li>
   );

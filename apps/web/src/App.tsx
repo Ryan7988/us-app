@@ -1,16 +1,49 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { lazy, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { FullScreenSpinner } from "@/components/FullScreenSpinner";
 import { Layout } from "@/components/Layout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { CalendarPage } from "@/features/calendar/CalendarPage";
-import { GachaPage } from "@/features/gacha/GachaPage";
 import { HomePage } from "@/features/home/HomePage";
 import { MorePage } from "@/features/more/MorePage";
 import { SetupPage } from "@/features/setup/SetupPage";
 import { WishListPage } from "@/features/wishlist/WishListPage";
 import { refreshAccessToken, useAuth } from "@/lib/auth";
+
+const AdminPage = lazy(() =>
+  import("@/features/admin/AdminPage").then((x) => ({ default: x.AdminPage })),
+);
+const AlbumDetail = lazy(() =>
+  import("@/features/album/AlbumDetail").then((x) => ({ default: x.AlbumDetail })),
+);
+const AlbumPage = lazy(() =>
+  import("@/features/album/AlbumPage").then((x) => ({ default: x.AlbumPage })),
+);
+const InvitationDetail = lazy(() =>
+  import("@/features/calendar/InvitationDetail").then((x) => ({ default: x.InvitationDetail })),
+);
+const InvitationsPage = lazy(() =>
+  import("@/features/calendar/InvitationsPage").then((x) => ({ default: x.InvitationsPage })),
+);
+const GachaPage = lazy(() =>
+  import("@/features/gacha/GachaPage").then((x) => ({ default: x.GachaPage })),
+);
+const HistoryPage = lazy(() =>
+  import("@/features/gacha/HistoryPage").then((x) => ({ default: x.HistoryPage })),
+);
+const PoolPage = lazy(() =>
+  import("@/features/gacha/PoolPage").then((x) => ({ default: x.PoolPage })),
+);
+const ReviewPage = lazy(() =>
+  import("@/features/gacha/ReviewPage").then((x) => ({ default: x.ReviewPage })),
+);
+const LocationPage = lazy(() =>
+  import("@/features/location/LocationPage").then((x) => ({ default: x.LocationPage })),
+);
+const SettingsPage = lazy(() =>
+  import("@/features/settings/SettingsPage").then((x) => ({ default: x.SettingsPage })),
+);
 
 /** 啟動流程：沒有使用者 → 初始設定；有 refresh cookie → 自動登入；否則 → 登入頁 */
 function useBootstrap() {
@@ -64,8 +97,18 @@ export default function App() {
         <Route index element={<HomePage />} />
         <Route path="wishes" element={<WishListPage />} />
         <Route path="calendar" element={<CalendarPage />} />
+        <Route path="calendar/invitations" element={<InvitationsPage />} />
+        <Route path="calendar/invitations/:id" element={<InvitationDetail />} />
         <Route path="gacha" element={<GachaPage />} />
+        <Route path="gacha/pool" element={<PoolPage />} />
+        <Route path="gacha/review" element={<ReviewPage />} />
+        <Route path="gacha/history" element={<HistoryPage />} />
         <Route path="more" element={<MorePage />} />
+        <Route path="more/album" element={<AlbumPage />} />
+        <Route path="more/album/:id" element={<AlbumDetail />} />
+        <Route path="more/location" element={<LocationPage />} />
+        <Route path="more/settings" element={<SettingsPage />} />
+        <Route path="more/admin" element={<AdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

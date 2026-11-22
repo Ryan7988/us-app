@@ -58,6 +58,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": { target: process.env.API_PROXY ?? "http://localhost:8000", ws: true },
+      // 開發模式：照片由 api 提供（正式環境由 Caddy 直接給檔）
+      "/media": {
+        target: process.env.API_PROXY ?? "http://localhost:8000",
+        rewrite: (p) => `/api/v1${p}`,
+      },
     },
   },
   test: {

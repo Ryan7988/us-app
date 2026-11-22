@@ -43,3 +43,68 @@ export function greeting(now: Date = new Date()): string {
   if (h < 18) return "午後好";
   return "晚安";
 }
+
+const fmt = (opts: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat("zh-TW", { timeZone: TZ, ...opts });
+
+export function formatTime(iso: string): string {
+  return fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+}
+
+export function formatDateTime(iso: string): string {
+  return fmt({
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
+}
+
+export function formatMonthDay(iso: string): string {
+  return fmt({ month: "numeric", day: "numeric", weekday: "short" }).format(new Date(iso));
+}
+
+/** 台北時間某天 00:00 的 Date（YYYY-MM-DD） */
+export function taipeiMidnight(key: string): Date {
+  return new Date(`${key}T00:00:00+08:00`);
+}
+
+export function addDays(key: string, n: number): string {
+  const d = taipeiMidnight(key);
+  d.setUTCDate(d.getUTCDate() + n);
+  return taipeiDateKey(d);
+}
+
+/** 月曆格子：從該月 1 號所在週的週日開始，共 42 天 */
+export function monthGrid(year: number, month: number): string[] {
+  const first = `${year}-${String(month).padStart(2, "0")}-01`;
+  const dow = new Date(`${first}T12:00:00+08:00`).getUTCDay();
+  const start = addDays(first, -dow);
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+/** <input type="datetime-local"> 的值（台北時間） */
+export function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+  return parts.replace(" ", "T");
+}
+
+/** datetime-local 值（台北時間）→ ISO 字串 */
+export function fromLocalInput(v: string): string {
+  return new Date(`${v}:00+08:00`).toISOString();
+}
+
+export function minutesAgo(iso: string, now: Date = new Date()): number {
+  return Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60000));
+}
