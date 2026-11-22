@@ -40,9 +40,12 @@ services:
     env_file: .env
     environment:
       APP_VERSION: ${APP_VERSION:-0.1.0}
+      MEDIA_ROOT: /app/data/media
+      BACKUP_STATUS_DIR: /app/data/backup-status
     volumes:
       - ./data/db:/app/data/db
       - ./data/media:/app/data/media
+      - ./data/backup-status:/app/data/backup-status:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/healthz')"]
       interval: 30s
@@ -59,16 +62,18 @@ services:
     env_file: .env
     environment:
       RUN_MIGRATIONS: "0" # 只有 api 跑 migration
+      MEDIA_ROOT: /app/data/media
+      BACKUP_STATUS_DIR: /app/data/backup-status
     volumes:
       - ./data/db:/app/data/db
       - ./data/media:/app/data/media
+      - ./data/backup-status:/app/data/backup-status:ro
     depends_on:
       api: { condition: service_healthy } # 等 api 做完 migration
 
   ollama:
     <<: *common
-    image: ollama/ollama:0.12.6
-    profiles: ["ai"] # P3 之前不啟動；要用時 COMPOSE_PROFILES=ai
+    image: ollama/ollama:0.12.6 # 模型在後台按「下載 AI 模型」
     volumes:
       - ./data/ollama:/root/.ollama
 

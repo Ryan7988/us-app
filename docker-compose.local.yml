@@ -3,6 +3,8 @@
 services:
   tailscale:
     profiles: ["tailscale"] # 不啟動
+  ollama:
+    profiles: ["ai"] # 本機測試預設不啟動（模型很大）
   web:
     network_mode: !reset null
     ports: ["127.0.0.1:8080:80"]

@@ -8,6 +8,9 @@ import pytest
 _tmpdir = tempfile.mkdtemp()
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmpdir}/test.sqlite3"
 os.environ["COOKIE_SECURE"] = "false"
+os.environ["MEDIA_ROOT"] = f"{_tmpdir}/media"
+os.environ["BACKUP_STATUS_DIR"] = f"{_tmpdir}/backup-status"
+os.environ["OLLAMA_URL"] = "http://127.0.0.1:9"  # 測試不連真的 Ollama
 
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlmodel import SQLModel  # noqa: E402
@@ -15,6 +18,8 @@ from sqlmodel import SQLModel  # noqa: E402
 from app.core.db import engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.routers.auth import login_limiter  # noqa: E402
+
+_send_real = None  # 原始的 push._send_one（給需要測真實加密的測試用）
 
 USERS = [
     {"username": "ryan", "display_name": "Ryan", "password": "password-ryan", "color": "#60a5fa"},
@@ -28,6 +33,38 @@ def _fresh_db() -> Iterator[None]:
     SQLModel.metadata.create_all(engine)
     login_limiter.reset()
     yield
+
+
+@pytest.fixture(autouse=True)
+def pushes(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    """攔截所有推播（不真的送出），測試可以檢查誰收到什麼。"""
+    import json
+
+    from app.services import push as push_mod
+
+    sent: list[dict] = []
+    global _send_real
+    _send_real = push_mod._send_one
+
+    def fake_send(sub, payload, vapid):  # type: ignore[no-untyped-def]
+        sent.append({"user_id": sub.user_id, **json.loads(payload)})
+        return 201
+
+    monkeypatch.setattr(push_mod, "_send_one", fake_send)
+    return sent
+
+
+def subscribe_push(client: TestClient, token: str, n: int = 0) -> None:
+    r = client.post(
+        "/api/v1/push/subscribe",
+        json={"endpoint": f"https://push.example/{token[-8:]}/{n}", "p256dh": "k", "auth": "a"},
+        headers=auth(token),
+    )
+    assert r.status_code == 204, r.text
+
+
+def me_id(client: TestClient, token: str) -> str:
+    return client.get("/api/v1/auth/me", headers=auth(token)).json()["id"]
 
 
 @pytest.fixture

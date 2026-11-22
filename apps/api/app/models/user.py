@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime
 
 from sqlmodel import Field
@@ -15,6 +16,11 @@ class User(TimestampMixin, table=True):
     avatar_path: str | None = None
     color: str = Field(default="#f472b6", max_length=16)
     is_admin: bool = True
+    # 行事曆訂閱連結用（行事曆 App 無法帶 JWT），可在設定頁重新產生
+    ics_token: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(24), unique=True, max_length=64
+    )
+    location_sharing: bool = False
 
 
 class RefreshToken(TimestampMixin, table=True):

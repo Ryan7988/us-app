@@ -5,9 +5,14 @@ from sqlmodel import col, select
 
 from app.core.deps import CurrentUser, SessionDep
 from app.core.time import utcnow
-from app.models import WishItem
+from app.models import Photo, WishItem
 from app.realtime.manager import manager
+from app.routers.photos import link_photo
 from app.schemas.wish import WishComplete, WishCreate, WishOut, WishUpdate
+from app.services import notify
+from app.services.media import thumb_url
+from app.services.people import partner_id
+from app.services.push import PushMessage
 
 router = APIRouter(prefix="/wishes", tags=["wishes"])
 
@@ -21,6 +26,15 @@ def _get_or_404(session: SessionDep, wish_id: str) -> WishItem:
 
 def _notify(bg: BackgroundTasks, action: str, wish: WishItem, by: str) -> None:
     bg.add_task(manager.broadcast, "wish.changed", {"id": wish.id, "action": action, "by": by})
+
+
+def _out(session: SessionDep, wish: WishItem) -> WishOut:
+    out = WishOut.model_validate(wish, from_attributes=True)
+    if wish.cover_photo_id:
+        p = session.get(Photo, wish.cover_photo_id)
+        if p and p.deleted_at is None:
+            out.cover_thumb_url = thumb_url(p)
+    return out
 
 
 @router.get("", response_model=list[WishOut])
@@ -37,7 +51,9 @@ def list_wishes(
         q = q.where(col(WishItem.done_at).is_not(None))
     if category:
         q = q.where(WishItem.category == category)
-    return session.exec(q.order_by(col(WishItem.created_at).desc())).all()
+    return [
+        _out(session, w) for w in session.exec(q.order_by(col(WishItem.created_at).desc())).all()
+    ]
 
 
 @router.post("", response_model=WishOut, status_code=status.HTTP_201_CREATED)
@@ -53,8 +69,12 @@ def create_wish(body: WishCreate, user: CurrentUser, session: SessionDep, bg: Ba
     session.commit()
     session.refresh(wish)
     _notify(bg, "created", wish, user.id)
-    # TODO(P2): 推播通知對方
-    return wish
+    notify.push(
+        bg,
+        [partner_id(session, user.id)],
+        PushMessage(f"⭐ {user.display_name} 新增了一個願望", wish.title, "/wishes", tag="wish"),
+    )
+    return _out(session, wish)
 
 
 @router.patch("/{wish_id}", response_model=WishOut)
@@ -72,7 +92,7 @@ def update_wish(
     session.commit()
     session.refresh(wish)
     _notify(bg, "updated", wish, user.id)
-    return wish
+    return _out(session, wish)
 
 
 @router.delete("/{wish_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -94,8 +114,14 @@ def complete_wish(
 ):
     wish = _get_or_404(session, wish_id)
     if body.done:
-        wish.done_at = utcnow()
-        wish.done_by = user.id
+        wish.done_at = wish.done_at or utcnow()
+        wish.done_by = wish.done_by or user.id
+        # 完成時附的照片自動進相簿（照片本來就在相簿裡），並關聯到這個願望
+        for pid in body.photo_ids:
+            photo = session.get(Photo, pid)
+            if photo and photo.deleted_at is None:
+                link_photo(session, pid, "wish", wish.id)
+                wish.cover_photo_id = wish.cover_photo_id or pid
     else:
         wish.done_at = None
         wish.done_by = None
@@ -104,5 +130,12 @@ def complete_wish(
     session.commit()
     session.refresh(wish)
     _notify(bg, "completed" if body.done else "reopened", wish, user.id)
-    # TODO(P4): 完成時附照片，自動進相簿
-    return wish
+    if body.done:
+        notify.push(
+            bg,
+            [partner_id(session, user.id)],
+            PushMessage(
+                f"🎉 {user.display_name} 完成了一個願望", wish.title, "/wishes", tag="wish"
+            ),
+        )
+    return _out(session, wish)

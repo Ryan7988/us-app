@@ -19,6 +19,19 @@ class Settings(BaseSettings):
     media_signing_key: str = "dev-insecure-media-key"
     login_rate_limit_per_minute: int = 5
 
+    # Web Push：留空會在第一次啟動時自動產生並存進資料庫
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:us-app@example.com"
+
+    media_root: str = "./data/media"
+    max_upload_mb: int = 30
+    backup_status_dir: str = "./data/backup-status"
+
+    ollama_url: str = "http://ollama:11434"
+    ollama_model: str = "qwen2.5:7b"
+    ollama_embed_model: str = "bge-m3"
+
 
 @lru_cache
 def get_settings() -> Settings:

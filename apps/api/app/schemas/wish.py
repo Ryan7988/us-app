@@ -19,6 +19,7 @@ class WishUpdate(BaseModel):
 
 class WishComplete(BaseModel):
     done: bool = True  # false = 取消完成
+    photo_ids: list[str] = Field(default_factory=list, max_length=50)  # 完成時附的照片
 
 
 class WishOut(BaseModel):
@@ -28,6 +29,7 @@ class WishOut(BaseModel):
     url: str | None
     category: str | None
     cover_photo_id: str | None
+    cover_thumb_url: str | None = None
     created_by: str
     created_at: UTCDateTime
     updated_at: UTCDateTime
