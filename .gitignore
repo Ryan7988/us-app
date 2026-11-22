@@ -1,0 +1,24 @@
+# 狀態與密鑰：不進 Git（搬家時另外複製）
+data/
+data-dev/
+backups/
+.env
+us-app-export.tar.zst*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+dev-dist/
+*.tsbuildinfo
+
+.DS_Store

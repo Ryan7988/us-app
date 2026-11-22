@@ -1,0 +1,7 @@
+# 時區由 TZ 環境變數決定（Asia/Taipei）
+# 每天 03:30 增量備份
+30 3 * * * /usr/local/bin/backup.sh
+# 每週日 05:00 檢查備份完整性
+0 5 * * 0 /usr/local/bin/verify.sh check
+# 每月 1 號 05:30 實際還原到暫存目錄並比對
+30 5 1 * * /usr/local/bin/verify.sh restore-test

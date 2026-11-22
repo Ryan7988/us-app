@@ -1,0 +1,31 @@
+# 安裝：uv tool install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^apps/api/
+      - id: ruff-format
+        files: ^apps/api/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-private-key
+      - id: end-of-file-fixer
+        exclude: ^apps/web/src/api/
+  - repo: local
+    hooks:
+      - id: web-lint
+        name: web lint + typecheck
+        entry: bash -c 'cd apps/web && pnpm lint && pnpm typecheck'
+        language: system
+        files: ^apps/web/src/
+        pass_filenames: false
+      - id: no-env
+        name: 不要提交 .env
+        entry: bash -c 'echo ".env 不可以進 Git" && exit 1'
+        language: system
+        files: (^|/)\.env$

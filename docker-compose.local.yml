@@ -1,0 +1,11 @@
+# 不用 Tailscale、直接在本機 http://localhost:8080 測試正式映像（也給 CI / E2E 用）
+# docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+services:
+  tailscale:
+    profiles: ["tailscale"] # 不啟動
+  web:
+    network_mode: !reset null
+    ports: ["127.0.0.1:8080:80"]
+  api:
+    environment:
+      COOKIE_SECURE: "false" # http://localhost 沒有 HTTPS
