@@ -40,6 +40,16 @@ iPhone（主畫面 PWA）──Tailscale──▶ tailscale ─▶ web (Caddy) �
 
 需要 Docker Engine + Compose plugin（Linux），或 Docker Desktop（Mac / Windows）。
 
+> **Windows**：`make` 和這些腳本要在 **WSL（Ubuntu）** 裡執行，不要在 cmd / PowerShell。
+> 而且專案要 clone 到 WSL 自己的資料夾（`~/us-app`），**不要放在 `C:\`、`E:\`（`/mnt/e`）**：
+> SQLite 放在 Windows 磁碟上透過 Docker 存取，檔案鎖不可靠，可能弄壞資料庫，速度也慢很多。
+>
+> 1. 系統管理員 PowerShell 執行 `wsl --install -d Ubuntu`，重開機，設定 Ubuntu 帳號密碼。
+> 2. 安裝 [Docker Desktop](https://www.docker.com/products/docker-desktop/) → Settings → Resources → WSL Integration → 打開 Ubuntu；
+>    Settings → General → 勾「Start Docker Desktop when you sign in」。
+> 3. 開「Ubuntu」，執行 `sudo apt update && sudo apt install -y make git`，接著照下面步驟。
+> 4. 這台電腦就是伺服器：Windows 設定 → 電源 → 睡眠改成「永不」。
+
 ```bash
 git clone <你的 repo> us-app && cd us-app
 make init          # 產生 .env（自動填好隨機密鑰）和 data/
