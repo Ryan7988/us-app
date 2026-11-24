@@ -7,7 +7,7 @@ VERSION := $(shell git describe --tags --always 2>/dev/null || echo dev)
 DEV_DB := sqlite:///../../data-dev/db/app.sqlite3
 s ?= api
 
-.PHONY: help init dirs dev dev-local up down restart deploy logs ps backup snapshots restore export local local-down test lint gen-api migration
+.PHONY: help init dirs dev dev-local up down restart recover deploy logs ps backup snapshots restore export local local-down test lint gen-api migration
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n",$$1,$$2}'
@@ -42,6 +42,11 @@ up: dirs ## 啟動正式環境
 
 down: ## 停止正式環境
 	$(PROD) down
+
+recover: ## 開機後服務異常（打不開資料庫、連不上）：重新建立容器、重新掛上資料夾，不會動到資料
+	@$(MAKE) -s dirs
+	$(PROD) up -d --force-recreate --no-build
+	@$(PROD) ps
 
 restart: ## 重啟某個服務：make restart s=api
 	$(PROD) restart $(s)

@@ -49,6 +49,11 @@ iPhone（主畫面 PWA）──Tailscale──▶ tailscale ─▶ web (Caddy) �
 >    Settings → General → 勾「Start Docker Desktop when you sign in」。
 > 3. 開「Ubuntu」，執行 `sudo apt update && sudo apt install -y make git`，接著照下面步驟。
 > 4. 這台電腦就是伺服器：Windows 設定 → 電源 → 睡眠改成「永不」。
+> 5. **開機自動恢復**（Docker Desktop 可能比 Ubuntu 先啟動，服務會打不開資料庫）：在 PowerShell 執行一次
+>    ```powershell
+>    $s=(New-Object -ComObject WScript.Shell).CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\us-app.lnk"); $s.TargetPath="wsl.exe"; $s.Arguments='-d Ubuntu -- bash -lc "~/us-app/scripts/wsl-autostart.sh"'; $s.WindowStyle=7; $s.Save()
+>    ```
+>    之後每次登入 Windows 都會自動執行 `make recover`。手動修復：在 Ubuntu 執行 `cd ~/us-app && make recover`。
 
 ```bash
 git clone <你的 repo> us-app && cd us-app
