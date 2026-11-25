@@ -5,14 +5,8 @@ import { useOnline } from "@/lib/online";
 import { useUsers } from "@/lib/users";
 import { useCancelReroll, useRequestReroll, useRespondReroll } from "./api";
 
-/** 重抽：一方提議、另一方同意才會重抽（兩支手機同步再開一次獎）。 */
-export function RerollPanel({
-  draw,
-  onRerolled,
-}: {
-  draw: DrawOut;
-  onRerolled: (d: DrawOut) => void;
-}) {
+/** 重抽：一方提議、另一方同意 → 回到等待開獎，兩人再各自按準備重新抽（保留儀式感）。 */
+export function RerollPanel({ draw }: { draw: DrawOut }) {
   const { me, byId } = useUsers();
   const online = useOnline();
   const request = useRequestReroll();
@@ -31,7 +25,8 @@ export function RerollPanel({
         <p className="font-semibold">🔄 {requester.display_name} 想重抽這張卡</p>
         {draw.reroll_reason && <p className="mt-1 text-sm">「{draw.reroll_reason}」</p>}
         <p className="mt-1 text-xs opacity-80">
-          同意的話會立刻重抽，這張卡會放回卡池；這個月還能重抽 {draw.rerolls_left} 次。
+          同意的話這次的結果會清空、卡片放回卡池，兩個人再各自按「準備好了」重新開獎。這個月還能重抽{" "}
+          {draw.rerolls_left} 次。
         </p>
         <div className="mt-3 flex gap-2">
           <button
@@ -44,9 +39,9 @@ export function RerollPanel({
           <button
             className="btn-primary flex-1"
             disabled={!online || respond.isPending}
-            onClick={async () => onRerolled(await respond.mutateAsync(true))}
+            onClick={() => respond.mutate(true)}
           >
-            {respond.isPending ? "重抽中…" : "同意重抽"}
+            {respond.isPending ? "…" : "同意重抽"}
           </button>
         </div>
         {error && <p className="mt-2 text-sm text-red-600">{error.message}</p>}
@@ -89,7 +84,7 @@ export function RerollPanel({
       <Sheet open={open} onClose={() => setOpen(false)} title="提議重抽">
         <div className="space-y-3">
           <p className="text-sm text-stone-500">
-            要兩個人都同意才會重抽。對方會收到通知，按「同意」後立刻重抽，這張卡會放回卡池，下次還可能抽到。
+            要兩個人都同意才會重抽。對方按「同意」後，這次的結果會清空、卡片放回卡池（下個月還可能抽到），兩個人再各自按「準備好了」重新開獎。
           </p>
           <input
             className="input"

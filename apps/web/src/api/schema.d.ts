@@ -646,7 +646,7 @@ export interface paths {
         put?: never;
         /**
          * Respond Reroll
-         * @description 另一方同意 → 立刻重抽（兩支手機同步開獎動畫）；不同意 → 維持原本的卡。
+         * @description 另一方同意 → 清空這次結果、回到等待開獎（兩人再各自按準備）；不同意 → 維持原本的卡。
          */
         post: operations["respond_reroll_api_v1_gacha_current_reroll_respond_post"];
         delete?: never;

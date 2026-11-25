@@ -165,6 +165,15 @@ const addDays = (key, n) => { const d = new Date(`${key}T12:00:00+08:00`); d.set
   await b.waitForSelector("text=Ryan 想重抽這張卡", { timeout: 3000 });
   await shot(b, "08b-reroll-request");
   await b.click("button:has-text('同意重抽')");
+  // 同意後回到等待開獎：兩人都要再按準備，一起看扭蛋過程
+  await Promise.all([
+    a.waitForSelector("text=重抽成立", { timeout: 3000 }),
+    b.waitForSelector("text=重抽成立", { timeout: 3000 }),
+  ]);
+  await shot(a, "08c-reroll-waiting");
+  await b.click("button:has-text('準備好了！')");
+  await a.waitForSelector("text=準備好了 ✓", { timeout: 3000 });
+  await a.click("button:has-text('準備好了！')");
   await Promise.all([
     a.waitForSelector("[role=dialog][aria-label='開獎']", { timeout: 5000 }),
     b.waitForSelector("[role=dialog][aria-label='開獎']", { timeout: 5000 }),
@@ -176,7 +185,7 @@ const addDays = (key, n) => { const d = new Date(`${key}T12:00:00+08:00`); d.set
   await a.click("text=收下任務");
   await b.click("text=收下任務");
   await b.waitForSelector("text=這個月的重抽次數用完了");
-  ok("雙方同意才重抽、兩支手機同步動畫", `${before} → ${after}`);
+  ok("雙方同意 → 兩人重新準備 → 一起看重抽動畫", `${before} → ${after}`);
   await b.setInputFiles("input[type=file]", path.join(IMG, "proof.jpg"));
   await b.waitForSelector("text=任務完成", { timeout: 10000 });
   await a.waitForSelector("text=任務完成", { timeout: 5000 });

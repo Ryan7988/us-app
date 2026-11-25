@@ -26,6 +26,7 @@ from app.services.gacha import (
     RerollError,
     active_pool,
     draw_lock,
+    excluded_this_period,
     get_or_create_current,
     history_rarities,
     misses_since_last_ssr,
@@ -194,7 +195,9 @@ def ready(user: CurrentUser, session: SessionDep, bg: BackgroundTasks) -> DrawOu
             return _draw_out(session, d)
         session.refresh(d)
         try:
-            d = perform_draw(session, d, get_gacha_settings(session))
+            d = perform_draw(
+                session, d, get_gacha_settings(session), exclude=excluded_this_period(d)
+            )
         except EmptyPoolError as e:
             d.status = "waiting"
             session.add(d)
@@ -298,7 +301,7 @@ def request_reroll(
 def respond_reroll(
     body: RerollRespondIn, user: CurrentUser, session: SessionDep, bg: BackgroundTasks
 ) -> DrawOut:
-    """另一方同意 → 立刻重抽（兩支手機同步開獎動畫）；不同意 → 維持原本的卡。"""
+    """另一方同意 → 清空這次結果、回到等待開獎（兩人再各自按準備）；不同意 → 維持原本的卡。"""
     with draw_lock:
         d = get_or_create_current(session)
         if not d.reroll_requested_by:
@@ -326,12 +329,12 @@ def respond_reroll(
             session.rollback()
             msg = str(e) if isinstance(e, RerollError) else "卡池裡沒有其他卡可以抽了"
             raise HTTPException(status.HTTP_409_CONFLICT, msg) from e
-    notify.ws(bg, "gacha.drawn", {"id": d.id, "rarity": d.rarity, "reroll": d.reroll_count})
+    notify.ws(bg, "gacha.reroll", {"action": "accepted", "by": user.id})
     notify.push(
         bg,
         [*session.exec(select(User.id)).all()],
         PushMessage(
-            f"🔄 重抽結果：{d.rarity}！", d.card_content or "", "/gacha", tag="gacha-drawn"
+            "🔄 重抽成立！", "兩個人都按「準備好了」就重新開獎", "/gacha", tag="gacha-reroll"
         ),
     )
     return _draw_out(session, d)

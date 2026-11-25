@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Us App API",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "paths": {
     "/api/v1/healthz": {
@@ -1880,7 +1880,7 @@
           "gacha"
         ],
         "summary": "Respond Reroll",
-        "description": "另一方同意 → 立刻重抽（兩支手機同步開獎動畫）；不同意 → 維持原本的卡。",
+        "description": "另一方同意 → 清空這次結果、回到等待開獎（兩人再各自按準備）；不同意 → 維持原本的卡。",
         "operationId": "respond_reroll_api_v1_gacha_current_reroll_respond_post",
         "requestBody": {
           "content": {

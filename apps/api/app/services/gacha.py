@@ -190,9 +190,10 @@ def rerolls_left(d: GachaDraw, settings: GachaSettings) -> int:
 
 
 def reroll(session: Session, d: GachaDraw, settings: GachaSettings, agreed_by: str) -> GachaDraw:
-    """雙方同意後重抽（呼叫前必須持有 draw_lock）。
+    """雙方同意重抽（呼叫前必須持有 draw_lock）：清空這次的結果、回到「等待開獎」。
 
-    - 原本的卡放回卡池（下個月還可能抽到），這次重抽不會再抽到它
+    兩個人要再各自按「準備好了」才重新開獎（保留儀式感，兩支手機一起看動畫）。
+    - 原本的卡放回卡池（下個月還可能抽到），這個月重新開獎不會再抽到它
     - 保底計算不受影響（同一期只算最後的結果）
     """
     if d.status != "drawn" or not d.card_id:
@@ -226,6 +227,47 @@ def reroll(session: Session, d: GachaDraw, settings: GachaSettings, agreed_by: s
         raise RerollError("卡池裡沒有其他卡可以抽了，先去新增幾張卡")
     d.rerolled_cards = history
     d.reroll_count += 1
+    clear_result(d)
+    session.add(d)
+    session.commit()
+    session.refresh(d)
+    return d
+
+
+def clear_result(d: GachaDraw) -> None:
+    """把這期的開獎結果清空，回到「等待兩人準備」。"""
+    d.status = "waiting"
+    d.ready_users = []
+    d.card_id = None
+    d.card_content = None
+    d.rarity = None
+    d.pity_triggered = False
+    d.rng_value = []
+    d.pool_snapshot = []
+    d.drawn_at = None
     d.reroll_requested_by = None
     d.reroll_reason = None
-    return perform_draw(session, d, settings, exclude=exclude)
+    d.updated_at = utcnow()
+
+
+def excluded_this_period(d: GachaDraw) -> set[str]:
+    """這個月被重抽換掉的卡，重新開獎時不會再抽到。"""
+    return {str(h["card_id"]) for h in d.rerolled_cards if h.get("card_id")}
+
+
+def reset_period(session: Session, d: GachaDraw) -> GachaDraw:
+    """重設這一期（維運用）：抽到的卡放回卡池、重抽次數歸零、回到等待開獎。"""
+    for cid in {d.card_id, *excluded_this_period(d)}:
+        card = session.get(GachaCard, cid) if cid else None
+        if card and card.status == "drawn":
+            card.status = "active"
+            session.add(card)
+    clear_result(d)
+    d.reroll_count = 0
+    d.rerolled_cards = []
+    d.proof_photo_id = None
+    d.completed_at = None
+    session.add(d)
+    session.commit()
+    session.refresh(d)
+    return d

@@ -7,7 +7,7 @@ VERSION := $(shell git describe --tags --always 2>/dev/null || echo dev)
 DEV_DB := sqlite:///../../data-dev/db/app.sqlite3
 s ?= api
 
-.PHONY: help init dirs dev dev-local up down restart recover deploy logs ps backup snapshots restore export local local-down test lint gen-api migration
+.PHONY: help init dirs dev dev-local up down restart recover gacha-reset deploy logs ps backup snapshots restore export local local-down test lint gen-api migration
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n",$$1,$$2}'
@@ -47,6 +47,10 @@ recover: ## 開機後服務異常（打不開資料庫、連不上）：重新�
 	@$(MAKE) -s dirs
 	$(PROD) up -d --force-recreate --no-build
 	@$(PROD) ps
+
+gacha-reset: ## 重設本月扭蛋：清掉這個月抽到的內容、重抽次數歸零（照片與歷史月份不受影響）
+	@read -p "確定要重設本月扭蛋嗎？兩個人要重新按準備開獎 (y/N) " a && [ "$$a" = "y" ]
+	$(PROD) exec api python -m app.admin_tasks reset-gacha-month
 
 restart: ## 重啟某個服務：make restart s=api
 	$(PROD) restart $(s)

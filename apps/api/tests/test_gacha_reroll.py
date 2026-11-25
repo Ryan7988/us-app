@@ -52,18 +52,30 @@ def test_reroll_needs_partner_agreement(
         )
         assert r.status_code == 200, r.text
         msg = ws.receive_json()
-        assert msg["type"] == "gacha.drawn" and msg["data"]["reroll"] == 1  # 兩支手機都會播動畫
-    new = r.json()
-    assert new["status"] == "drawn" and new["card_id"] != first["card_id"]  # 不會抽到同一張
-    assert (
-        new["reroll_count"] == 1 and new["rerolls_left"] == 0 and new["reroll_requested_by"] is None
-    )
-    assert new["rerolled_cards"][0]["card_id"] == first["card_id"]
-    assert new["rerolled_cards"][0]["reason"] == "月底才開始，來不及"
+        assert msg["type"] == "gacha.reroll" and msg["data"]["action"] == "accepted"
+    # 同意後：清空這次結果，回到等待開獎（要兩人再各自準備）
+    w = r.json()
+    assert w["status"] == "waiting" and w["ready_users"] == [] and w["card_id"] is None
+    assert w["card_content"] is None and w["rarity"] is None
+    assert w["reroll_count"] == 1 and w["rerolls_left"] == 0 and w["reroll_requested_by"] is None
+    assert w["rerolled_cards"][0]["card_id"] == first["card_id"]
+    assert w["rerolled_cards"][0]["reason"] == "月底才開始，來不及"
+    assert any("重抽成立" in p["title"] for p in pushes)
     with Session(engine) as s:
         old = s.get(GachaCard, first["card_id"])
         assert old is not None and old.status == "active"  # 換掉的卡放回卡池
-        assert len(s.exec(select(GachaCard).where(GachaCard.status == "drawn")).all()) == 1
+        assert s.exec(select(GachaCard).where(GachaCard.status == "drawn")).all() == []
+
+    # 只有一個人準備不會開獎
+    assert (
+        client.post("/api/v1/gacha/current/ready", headers=auth(ta)).json()["status"] == "waiting"
+    )
+    with client.websocket_connect(f"/api/v1/ws?token={ta}") as ws:
+        new = client.post("/api/v1/gacha/current/ready", headers=auth(tb)).json()
+        msg = ws.receive_json()
+        assert msg["type"] == "gacha.drawn"  # 兩支手機一起看開獎動畫
+    assert new["status"] == "drawn" and new["card_id"] != first["card_id"]  # 不會抽到被換掉的卡
+    assert new["reroll_count"] == 1
 
     # 次數用完
     r = client.post("/api/v1/gacha/current/reroll/request", json={}, headers=auth(tb))
@@ -104,7 +116,7 @@ def test_reroll_only_when_drawn_and_pool_not_empty(client: TestClient, setup_don
     ta, tb = _drawn(client, n_cards=1)  # 卡池只有一張：重抽後沒有別的可抽
     client.post("/api/v1/gacha/current/reroll/request", json={}, headers=auth(ta))
     r = client.post("/api/v1/gacha/current/reroll/respond", json={"accept": True}, headers=auth(tb))
-    assert r.status_code == 409 and "沒有其他卡" in r.json()["detail"]
+    assert r.status_code == 409 and "沒有其他卡" in r.json()["detail"], r.text
     with Session(engine) as s:
         d = s.exec(select(GachaDraw)).one()
         assert d.status == "drawn" and d.reroll_count == 0  # 失敗時什麼都沒變
@@ -136,3 +148,19 @@ def _drawn_with_zero(client: TestClient) -> tuple[str, str]:
     client.post("/api/v1/gacha/current/ready", headers=auth(ta))
     client.post("/api/v1/gacha/current/ready", headers=auth(tb))
     return ta, tb
+
+
+def test_reset_month_task(client: TestClient, setup_done: None) -> None:
+    from app.admin_tasks import reset_gacha_month
+
+    ta, tb = _drawn(client)
+    client.post("/api/v1/gacha/current/reroll/request", json={}, headers=auth(ta))
+    client.post("/api/v1/gacha/current/reroll/respond", json={"accept": True}, headers=auth(tb))
+    client.post("/api/v1/gacha/current/ready", headers=auth(ta))
+    client.post("/api/v1/gacha/current/ready", headers=auth(tb))
+    reset_gacha_month()
+    d = client.get("/api/v1/gacha/current", headers=auth(ta)).json()["draw"]
+    assert d["status"] == "waiting" and d["card_id"] is None and d["ready_users"] == []
+    assert d["reroll_count"] == 0 and d["rerolls_left"] == 1 and d["rerolled_cards"] == []
+    with Session(engine) as s:
+        assert s.exec(select(GachaCard).where(GachaCard.status == "drawn")).all() == []

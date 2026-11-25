@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_version: str = "1.1.0"
+    app_version: str = "1.2.0"
     tz: str = "Asia/Taipei"
     database_url: str = "sqlite:///./data/db/app.sqlite3"
 

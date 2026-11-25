@@ -84,6 +84,12 @@ export function GachaPage() {
       {(d.status === "waiting" || d.status === "drawing") && (
         <div className="card flex flex-col items-center py-6">
           <GachaMachine size={180} shaking={ready.isPending} />
+          {d.rerolled_cards.length > 0 && (
+            <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-center text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-100">
+              🔄 重抽成立！「{d.rerolled_cards[d.rerolled_cards.length - 1].content}
+              」已放回卡池，這次不會再抽到它
+            </p>
+          )}
           <p className="mt-2 font-semibold">兩個人都按下「準備好了」就開獎</p>
           <div className="mt-4 flex gap-6">
             {users.map((u) => {
@@ -184,9 +190,7 @@ export function GachaPage() {
         </div>
       )}
 
-      {d.status === "drawn" && (
-        <RerollPanel draw={d} onRerolled={(nd) => !wasRevealed(revealKey(nd)) && setReveal(nd)} />
-      )}
+      {d.status === "drawn" && <RerollPanel draw={d} />}
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Link to="/gacha/pool" className="card text-center text-sm">
