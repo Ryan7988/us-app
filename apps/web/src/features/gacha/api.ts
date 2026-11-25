@@ -154,6 +154,39 @@ export function useSimulate() {
   });
 }
 
+/** 重抽後同一期會有新結果：用「期別 + 重抽次數」當作看過動畫的 key */
+export function revealKey(d: { id: string; reroll_count?: number }): string {
+  return `${d.id}:${d.reroll_count ?? 0}`;
+}
+
+export function useRequestReroll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) =>
+      unwrap(
+        api.POST("/api/v1/gacha/current/reroll/request", { body: { reason: reason || null } }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gacha"] }),
+  });
+}
+
+export function useRespondReroll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (accept: boolean) =>
+      unwrap(api.POST("/api/v1/gacha/current/reroll/respond", { body: { accept } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gacha"] }),
+  });
+}
+
+export function useCancelReroll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.POST("/api/v1/gacha/current/reroll/cancel")),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["gacha"] }),
+  });
+}
+
 const KEY = "gacha-revealed";
 export function wasRevealed(drawId: string): boolean {
   try {

@@ -224,6 +224,7 @@ def gacha_settle(session: Session) -> str:
             card.status = "active"
             session.add(card)
     d.status = "failed"
+    d.reroll_requested_by = None
     d.updated_at = utcnow()
     session.add(d)
     session.commit()

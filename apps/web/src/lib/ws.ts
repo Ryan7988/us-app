@@ -14,6 +14,7 @@ const INVALIDATE: Record<string, string[][]> = {
   "invitation.responded": [["invitations"], ["events"]],
   "gacha.ready": [["gacha"]],
   "gacha.drawn": [["gacha"]],
+  "gacha.reroll": [["gacha"]],
   "photo.added": [["photos"], ["albums"]],
   "location.updated": [["locations"]],
 };

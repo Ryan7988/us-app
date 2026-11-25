@@ -53,6 +53,12 @@ export function HistoryPage() {
                 <span className="ml-auto">{LABEL[d.status] ?? d.status}</span>
               </div>
               <p className="mt-1 font-medium">{d.card_content ?? "—"}</p>
+              {d.rerolled_cards.length > 0 && (
+                <p className="mt-0.5 text-xs text-stone-400">
+                  🔄 重抽過 {d.rerolled_cards.length} 次（原本：
+                  {d.rerolled_cards.map((c) => c.content).join("、")}）
+                </p>
+              )}
             </div>
           </li>
         ))}

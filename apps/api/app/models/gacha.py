@@ -39,6 +39,8 @@ class GachaSettings(SQLModel, table=True):
     )
     pity_threshold: int = 6
     ai_min_pool: int = 20
+    # 每月可重抽次數（雙方都同意才會重抽）
+    rerolls_per_month: int = 1
 
 
 class GachaDraw(TimestampMixin, table=True):
@@ -60,3 +62,10 @@ class GachaDraw(TimestampMixin, table=True):
     status: str = Field(default="waiting", max_length=8)
     proof_photo_id: str | None = Field(default=None, max_length=36)
     completed_at: datetime | None = None
+    # 重抽：一方提議 → 另一方同意才重抽；換掉的卡留紀錄
+    reroll_requested_by: str | None = Field(default=None, max_length=36)
+    reroll_reason: str | None = Field(default=None, max_length=200)
+    reroll_count: int = 0
+    rerolled_cards: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )

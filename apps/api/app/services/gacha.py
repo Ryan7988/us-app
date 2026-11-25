@@ -124,9 +124,11 @@ def get_or_create_current(session: Session, period: str | None = None) -> GachaD
     return d
 
 
-def perform_draw(session: Session, d: GachaDraw, settings: GachaSettings) -> GachaDraw:
-    """呼叫前必須持有 draw_lock。結果與當下卡池快照都寫進紀錄，誰都無法重抽。"""
-    pool = active_pool(session)
+def perform_draw(
+    session: Session, d: GachaDraw, settings: GachaSettings, exclude: set[str] | None = None
+) -> GachaDraw:
+    """呼叫前必須持有 draw_lock。結果與當下卡池快照都寫進紀錄；重抽只能雙方同意（見 reroll）。"""
+    pool = [c for c in active_pool(session) if c.id not in (exclude or set())]
     misses = misses_since_last_ssr(history_rarities(session, exclude_period=d.period))
     result = draw(
         pool, settings.rarity_weights, settings.source_weights, settings.pity_threshold, misses
@@ -177,3 +179,53 @@ def simulate(
         "source": {k: v / n for k, v in sources.items()},
         "pity_rate": pity_count / n,
     }
+
+
+class RerollError(Exception):
+    pass
+
+
+def rerolls_left(d: GachaDraw, settings: GachaSettings) -> int:
+    return max(0, settings.rerolls_per_month - d.reroll_count)
+
+
+def reroll(session: Session, d: GachaDraw, settings: GachaSettings, agreed_by: str) -> GachaDraw:
+    """雙方同意後重抽（呼叫前必須持有 draw_lock）。
+
+    - 原本的卡放回卡池（下個月還可能抽到），這次重抽不會再抽到它
+    - 保底計算不受影響（同一期只算最後的結果）
+    """
+    if d.status != "drawn" or not d.card_id:
+        raise RerollError("只有「已開獎、還沒完成」的任務可以重抽")
+    if d.reroll_requested_by is None:
+        raise RerollError("沒有人提議重抽")
+    if rerolls_left(d, settings) <= 0:
+        raise RerollError("這個月的重抽次數用完了")
+    old = session.get(GachaCard, d.card_id)
+    now = utcnow()
+    history = [
+        *d.rerolled_cards,
+        {
+            "card_id": d.card_id,
+            "content": d.card_content,
+            "rarity": d.rarity,
+            "requested_by": d.reroll_requested_by,
+            "agreed_by": agreed_by,
+            "reason": d.reroll_reason,
+            "at": now.isoformat(),
+        },
+    ]
+    exclude = {str(h["card_id"]) for h in history}
+    if old and old.status == "drawn":
+        old.status = "active"
+        old.updated_at = now
+        session.add(old)
+        session.flush()
+    if not [c for c in active_pool(session) if c.id not in exclude]:
+        session.rollback()
+        raise RerollError("卡池裡沒有其他卡可以抽了，先去新增幾張卡")
+    d.rerolled_cards = history
+    d.reroll_count += 1
+    d.reroll_requested_by = None
+    d.reroll_reason = None
+    return perform_draw(session, d, settings, exclude=exclude)

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Us App API",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "paths": {
     "/api/v1/healthz": {
@@ -1827,6 +1827,126 @@
         ]
       }
     },
+    "/api/v1/gacha/current/reroll/request": {
+      "post": {
+        "tags": [
+          "gacha"
+        ],
+        "summary": "Request Reroll",
+        "description": "提議重抽：對方按同意才會真的重抽。",
+        "operationId": "request_reroll_api_v1_gacha_current_reroll_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RerollRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrawOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/gacha/current/reroll/respond": {
+      "post": {
+        "tags": [
+          "gacha"
+        ],
+        "summary": "Respond Reroll",
+        "description": "另一方同意 → 立刻重抽（兩支手機同步開獎動畫）；不同意 → 維持原本的卡。",
+        "operationId": "respond_reroll_api_v1_gacha_current_reroll_respond_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RerollRespondIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrawOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/gacha/current/reroll/cancel": {
+      "post": {
+        "tags": [
+          "gacha"
+        ],
+        "summary": "Cancel Reroll",
+        "operationId": "cancel_reroll_api_v1_gacha_current_reroll_cancel_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrawOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/gacha/history": {
       "get": {
         "tags": [
@@ -3541,6 +3661,46 @@
               }
             ],
             "title": "Completed At"
+          },
+          "reroll_requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reroll Requested By"
+          },
+          "reroll_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reroll Reason"
+          },
+          "reroll_count": {
+            "type": "integer",
+            "title": "Reroll Count",
+            "default": 0
+          },
+          "rerolls_left": {
+            "type": "integer",
+            "title": "Rerolls Left",
+            "default": 0
+          },
+          "rerolled_cards": {
+            "items": {
+              "$ref": "#/components/schemas/RerolledCard"
+            },
+            "type": "array",
+            "title": "Rerolled Cards",
+            "default": []
           }
         },
         "type": "object",
@@ -3952,6 +4112,13 @@
             "maximum": 500.0,
             "minimum": 0.0,
             "title": "Ai Min Pool"
+          },
+          "rerolls_per_month": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Rerolls Per Month",
+            "default": 1
           }
         },
         "type": "object",
@@ -4681,6 +4848,115 @@
           "endpoint"
         ],
         "title": "PushUnsubscribeIn"
+      },
+      "RerollRequestIn": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "title": "RerollRequestIn"
+      },
+      "RerollRespondIn": {
+        "properties": {
+          "accept": {
+            "type": "boolean",
+            "title": "Accept"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accept"
+        ],
+        "title": "RerollRespondIn"
+      },
+      "RerolledCard": {
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "title": "Card Id"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "agreed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreed By"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "at": {
+            "type": "string",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card_id",
+          "content",
+          "rarity",
+          "requested_by",
+          "agreed_by",
+          "reason",
+          "at"
+        ],
+        "title": "RerolledCard"
       },
       "SessionOut": {
         "properties": {

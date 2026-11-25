@@ -287,7 +287,18 @@ function GachaSection() {
       {Math.abs(sum - 1) > 0.001 && (
         <p className="text-xs text-red-500">加總要是 100%（目前 {Math.round(sum * 100)}%）</p>
       )}
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid grid-cols-3 gap-2 text-sm">
+        <label>
+          每月重抽
+          <input
+            type="number"
+            min={0}
+            max={5}
+            className="input mt-1"
+            value={s.rerolls_per_month ?? 1}
+            onChange={(e) => set({ rerolls_per_month: Number(e.target.value) })}
+          />
+        </label>
         <label>
           保底次數
           <input
@@ -300,7 +311,7 @@ function GachaSection() {
           />
         </label>
         <label>
-          自己寫的卡權重
+          自寫卡權重
           <input
             type="number"
             min={0.1}

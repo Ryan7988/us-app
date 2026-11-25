@@ -615,6 +615,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gacha/current/reroll/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Reroll
+         * @description 提議重抽：對方按同意才會真的重抽。
+         */
+        post: operations["request_reroll_api_v1_gacha_current_reroll_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gacha/current/reroll/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Respond Reroll
+         * @description 另一方同意 → 立刻重抽（兩支手機同步開獎動畫）；不同意 → 維持原本的卡。
+         */
+        post: operations["respond_reroll_api_v1_gacha_current_reroll_respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gacha/current/reroll/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Reroll */
+        post: operations["cancel_reroll_api_v1_gacha_current_reroll_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gacha/history": {
         parameters: {
             query?: never;
@@ -1169,6 +1226,25 @@ export interface components {
             proof_thumb_url?: string | null;
             /** Completed At */
             completed_at: string | null;
+            /** Reroll Requested By */
+            reroll_requested_by?: string | null;
+            /** Reroll Reason */
+            reroll_reason?: string | null;
+            /**
+             * Reroll Count
+             * @default 0
+             */
+            reroll_count: number;
+            /**
+             * Rerolls Left
+             * @default 0
+             */
+            rerolls_left: number;
+            /**
+             * Rerolled Cards
+             * @default []
+             */
+            rerolled_cards: components["schemas"]["RerolledCard"][];
         };
         /** ErrorOut */
         ErrorOut: {
@@ -1279,6 +1355,11 @@ export interface components {
             pity_threshold: number;
             /** Ai Min Pool */
             ai_min_pool: number;
+            /**
+             * Rerolls Per Month
+             * @default 1
+             */
+            rerolls_per_month: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1496,6 +1577,33 @@ export interface components {
         PushUnsubscribeIn: {
             /** Endpoint */
             endpoint: string;
+        };
+        /** RerollRequestIn */
+        RerollRequestIn: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** RerollRespondIn */
+        RerollRespondIn: {
+            /** Accept */
+            accept: boolean;
+        };
+        /** RerolledCard */
+        RerolledCard: {
+            /** Card Id */
+            card_id: string;
+            /** Content */
+            content: string | null;
+            /** Rarity */
+            rarity: string | null;
+            /** Requested By */
+            requested_by: string | null;
+            /** Agreed By */
+            agreed_by: string | null;
+            /** Reason */
+            reason: string | null;
+            /** At */
+            at: string;
         };
         /** SessionOut */
         SessionOut: {
@@ -2925,6 +3033,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_reroll_api_v1_gacha_current_reroll_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RerollRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrawOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_reroll_api_v1_gacha_current_reroll_respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RerollRespondIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrawOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_reroll_api_v1_gacha_current_reroll_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrawOut"];
                 };
             };
         };

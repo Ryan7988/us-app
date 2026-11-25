@@ -10,6 +10,7 @@ import { useUsers } from "@/lib/users";
 import { onRealtime } from "@/lib/ws";
 import {
   markRevealed,
+  revealKey,
   RARITY_STYLE,
   useCompleteDraw,
   useGachaCurrent,
@@ -18,6 +19,7 @@ import {
 } from "./api";
 import { GachaMachine } from "./GachaMachine";
 import { GachaReveal } from "./GachaReveal";
+import { RerollPanel } from "./RerollPanel";
 
 export function GachaPage() {
   const { data, isLoading, error, refetch } = useGachaCurrent();
@@ -36,7 +38,7 @@ export function GachaPage() {
         if (type === "gacha.drawn" && payload.rarity) {
           const r = await refetch();
           const d = r.data?.draw;
-          if (d?.status === "drawn" && !wasRevealed(d.id)) setReveal(d);
+          if (d?.status === "drawn" && !wasRevealed(revealKey(d))) setReveal(d);
         }
       }),
     [refetch],
@@ -53,7 +55,7 @@ export function GachaPage() {
 
   const pressReady = async () => {
     const r = await ready.mutateAsync(!iAmReady);
-    if (r.status === "drawn" && !wasRevealed(r.id)) setReveal(r);
+    if (r.status === "drawn" && !wasRevealed(revealKey(r))) setReveal(r);
   };
 
   const onProof = async (files: FileList | null) => {
@@ -137,7 +139,7 @@ export function GachaPage() {
           </p>
           {d.pity_triggered && <p className="text-xs font-semibold text-amber-700">保底</p>}
           <p className="mt-3 text-xl font-bold">{d.card_content}</p>
-          {d.status === "drawn" && !wasRevealed(d.id) && (
+          {d.status === "drawn" && !wasRevealed(revealKey(d)) && (
             <button className="btn-ghost mt-3 bg-white/60" onClick={() => setReveal(d)}>
               🎁 開蛋動畫
             </button>
@@ -182,6 +184,10 @@ export function GachaPage() {
         </div>
       )}
 
+      {d.status === "drawn" && (
+        <RerollPanel draw={d} onRerolled={(nd) => !wasRevealed(revealKey(nd)) && setReveal(nd)} />
+      )}
+
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Link to="/gacha/pool" className="card text-center text-sm">
           🃏
@@ -212,7 +218,7 @@ export function GachaPage() {
             content={reveal.card_content ?? ""}
             pity={reveal.pity_triggered}
             onClose={() => {
-              markRevealed(reveal.id);
+              markRevealed(revealKey(reveal));
               setReveal(null);
             }}
           />

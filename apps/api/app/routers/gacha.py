@@ -16,17 +16,22 @@ from app.schemas.gacha import (
     CurrentOut,
     DrawOut,
     GachaSettingsIO,
+    RerollRequestIn,
+    RerollRespondIn,
     SimulateOut,
 )
 from app.services import notify
 from app.services.gacha import (
     EmptyPoolError,
+    RerollError,
     active_pool,
     draw_lock,
     get_or_create_current,
     history_rarities,
     misses_since_last_ssr,
     perform_draw,
+    reroll,
+    rerolls_left,
     simulate,
     streak,
 )
@@ -40,6 +45,7 @@ router = APIRouter(prefix="/gacha", tags=["gacha"])
 
 def _draw_out(session: SessionDep, d: GachaDraw) -> DrawOut:
     out = DrawOut.model_validate(d, from_attributes=True)
+    out.rerolls_left = rerolls_left(d, get_gacha_settings(session))
     if d.proof_photo_id:
         p = session.get(Photo, d.proof_photo_id)
         out.proof_thumb_url = thumb_url(p) if p else None
@@ -232,6 +238,8 @@ def complete(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "找不到照片")
     now = utcnow()
     d.status = "done"
+    d.reroll_requested_by = None
+    d.reroll_reason = None
     d.proof_photo_id = photo.id
     d.completed_at = now
     d.updated_at = now
@@ -248,6 +256,98 @@ def complete(
             f"🏆 {user.display_name} 上傳了本月任務的證明！", d.card_content or "", "/gacha"
         ),
     )
+    return _draw_out(session, d)
+
+
+# ---- 重抽（雙方都同意才會重抽）----
+@router.post("/current/reroll/request", response_model=DrawOut)
+def request_reroll(
+    body: RerollRequestIn, user: CurrentUser, session: SessionDep, bg: BackgroundTasks
+) -> DrawOut:
+    """提議重抽：對方按同意才會真的重抽。"""
+    with draw_lock:
+        d = get_or_create_current(session)
+        settings = get_gacha_settings(session)
+        if d.status != "drawn":
+            raise HTTPException(status.HTTP_409_CONFLICT, "只有「已開獎、還沒完成」的任務可以重抽")
+        if rerolls_left(d, settings) <= 0:
+            raise HTTPException(status.HTTP_409_CONFLICT, "這個月的重抽次數用完了")
+        if d.reroll_requested_by and d.reroll_requested_by != user.id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "對方已經提議重抽了，直接按同意就好")
+        d.reroll_requested_by = user.id
+        d.reroll_reason = (body.reason or "").strip() or None
+        d.updated_at = utcnow()
+        session.add(d)
+        session.commit()
+        session.refresh(d)
+    notify.ws(bg, "gacha.reroll", {"action": "requested", "by": user.id})
+    notify.push(
+        bg,
+        [partner_id(session, user.id)],
+        PushMessage(
+            f"🔄 {user.display_name} 想重抽這個月的扭蛋",
+            d.reroll_reason or "打開 App 決定要不要同意",
+            "/gacha",
+            tag="gacha-reroll",
+        ),
+    )
+    return _draw_out(session, d)
+
+
+@router.post("/current/reroll/respond", response_model=DrawOut)
+def respond_reroll(
+    body: RerollRespondIn, user: CurrentUser, session: SessionDep, bg: BackgroundTasks
+) -> DrawOut:
+    """另一方同意 → 立刻重抽（兩支手機同步開獎動畫）；不同意 → 維持原本的卡。"""
+    with draw_lock:
+        d = get_or_create_current(session)
+        if not d.reroll_requested_by:
+            raise HTTPException(status.HTTP_409_CONFLICT, "沒有人提議重抽")
+        if d.reroll_requested_by == user.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "要由對方同意才行")
+        requester = d.reroll_requested_by
+        if not body.accept:
+            d.reroll_requested_by = None
+            d.reroll_reason = None
+            d.updated_at = utcnow()
+            session.add(d)
+            session.commit()
+            session.refresh(d)
+            notify.ws(bg, "gacha.reroll", {"action": "declined", "by": user.id})
+            notify.push(
+                bg,
+                [requester],
+                PushMessage(f"{user.display_name} 想維持這張卡 💪", d.card_content or "", "/gacha"),
+            )
+            return _draw_out(session, d)
+        try:
+            d = reroll(session, d, get_gacha_settings(session), agreed_by=user.id)
+        except (RerollError, EmptyPoolError) as e:
+            session.rollback()
+            msg = str(e) if isinstance(e, RerollError) else "卡池裡沒有其他卡可以抽了"
+            raise HTTPException(status.HTTP_409_CONFLICT, msg) from e
+    notify.ws(bg, "gacha.drawn", {"id": d.id, "rarity": d.rarity, "reroll": d.reroll_count})
+    notify.push(
+        bg,
+        [*session.exec(select(User.id)).all()],
+        PushMessage(
+            f"🔄 重抽結果：{d.rarity}！", d.card_content or "", "/gacha", tag="gacha-drawn"
+        ),
+    )
+    return _draw_out(session, d)
+
+
+@router.post("/current/reroll/cancel", response_model=DrawOut)
+def cancel_reroll(user: CurrentUser, session: SessionDep, bg: BackgroundTasks) -> DrawOut:
+    with draw_lock:
+        d = get_or_create_current(session)
+        if d.reroll_requested_by == user.id:
+            d.reroll_requested_by = None
+            d.reroll_reason = None
+            session.add(d)
+            session.commit()
+            session.refresh(d)
+            notify.ws(bg, "gacha.reroll", {"action": "cancelled", "by": user.id})
     return _draw_out(session, d)
 
 
@@ -273,6 +373,7 @@ def write_settings(body: GachaSettingsIO, _: CurrentUser, session: SessionDep) -
     }
     s.pity_threshold = body.pity_threshold
     s.ai_min_pool = body.ai_min_pool
+    s.rerolls_per_month = body.rerolls_per_month
     session.add(s)
     session.commit()
     return GachaSettingsIO.model_validate(s, from_attributes=True)

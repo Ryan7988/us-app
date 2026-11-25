@@ -155,6 +155,28 @@ const addDays = (key, n) => { const d = new Date(`${key}T12:00:00+08:00`); d.set
   ok("開獎結果", rarity);
   await a.click("text=收下任務");
   await b.click("text=收下任務");
+
+  // 重抽：A 提議 → B 同意 → 兩支手機再播一次動畫，換成別張卡
+  const before = await a.locator("p.mt-3.text-xl").first().innerText();
+  await a.click("text=這個月真的做不到？");
+  await a.fill("input[aria-label='重抽理由']", "月底才開始，來不及準備");
+  await a.click("button:has-text('送出提議')");
+  await a.waitForSelector("text=等 寶貝 同意中");
+  await b.waitForSelector("text=Ryan 想重抽這張卡", { timeout: 3000 });
+  await shot(b, "08b-reroll-request");
+  await b.click("button:has-text('同意重抽')");
+  await Promise.all([
+    a.waitForSelector("[role=dialog][aria-label='開獎']", { timeout: 5000 }),
+    b.waitForSelector("[role=dialog][aria-label='開獎']", { timeout: 5000 }),
+  ]);
+  await a.waitForSelector("text=收下任務", { timeout: 8000 });
+  await b.waitForSelector("text=收下任務", { timeout: 8000 });
+  const after = await a.locator("[role=dialog] p.text-xl").innerText();
+  if (after === before) throw new Error(`重抽後還是同一張卡：${after}`);
+  await a.click("text=收下任務");
+  await b.click("text=收下任務");
+  await b.waitForSelector("text=這個月的重抽次數用完了");
+  ok("雙方同意才重抽、兩支手機同步動畫", `${before} → ${after}`);
   await b.setInputFiles("input[type=file]", path.join(IMG, "proof.jpg"));
   await b.waitForSelector("text=任務完成", { timeout: 10000 });
   await a.waitForSelector("text=任務完成", { timeout: 5000 });
